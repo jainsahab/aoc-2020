@@ -6,15 +6,13 @@
   (let [max (apply max input)
         device-jolt (+ 3 max)
         input (concat [0] (sort input) [device-jolt])]
-    (loop [input input
-           acc {1 0 3 0}]
-      (if (nil? (next input))
-        (->> (select-keys acc [1 3])
-             vals
-             (apply *))
-        (let [first (first input)
-              second (second input)]
-          (recur (rest input) (update acc (- second first) inc)))))))
+    (->> input
+         (partition 2 1)
+         (map #(- (second %) (first %)))
+         frequencies
+         (#(select-keys % [1 3]))
+         vals
+         (apply *))))
 
 (defn distinct-ways [input]
   (let [maximum (apply max input)
