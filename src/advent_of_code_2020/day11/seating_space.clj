@@ -16,6 +16,27 @@
          (map #(-> (nth input (first %))
                    (nth (second %)))))))
 
+(defn index-in-direction [rfn cfn row col]
+  (lazy-seq (cons [(rfn row) (cfn col)] (index-in-direction rfn cfn (rfn row) (cfn col)))))
+(def top (partial index-in-direction dec identity))
+(def bottom (partial index-in-direction inc identity))
+(def left (partial index-in-direction identity dec))
+(def right (partial index-in-direction identity inc))
+(def top-left (partial index-in-direction dec dec))
+(def top-right (partial index-in-direction dec inc))
+(def bottom-left (partial index-in-direction inc dec))
+(def bottom-right (partial index-in-direction inc inc))
+
+(defn find-first [f coll]
+  (first (filter f coll)))
+
+(defn seats-in-all-direction [input row col]
+  (for [direction [top bottom left right top-left top-right bottom-left bottom-right]
+        :let [value (->> (direction row col)
+                         (find-first #(not= "." (get-in input %))))]
+        :when (not (nil? (get-in input value)))]
+    (get-in input value)))
+
 (defn apply-rules-unoptimized [input]
   (->> (for [row (range (count input))
              col (range (count (first input)))]
@@ -44,9 +65,21 @@
          [row col])
        (reduce #(update-in %1 %2 change-seat-availability) input)))
 
-(defn count-occupied-seats [input]
+(defn apply-rules-part-two [input]
+  (->> (for [row (range (count input))
+             col (range (count (first input)))
+             :let [adjacent-frequencies (-> (seats-in-all-direction input row col)
+                                            frequencies)
+                   current (-> (nth input row)
+                               (nth col))]
+             :when (or (and (= current "L") (= 0 (get adjacent-frequencies "#" 0)))
+                       (and (= current "#") (<= 5 (get adjacent-frequencies "#" 0))))]
+         [row col])
+       (reduce #(update-in %1 %2 change-seat-availability) input)))
+
+(defn count-occupied-seats [fn input]
   (loop [old input]
-    (let [new (apply-rules old)]
+    (let [new (fn old)]
       (if (= old new)
         (->> new
              (map frequencies)
@@ -59,4 +92,5 @@
                    str/split-lines
                    (map #(str/split % #""))
                    vec)]
-    (println (time (count-occupied-seats input)))))
+    (println (time (count-occupied-seats apply-rules input)))
+    (println (time (count-occupied-seats apply-rules-part-two input)))))
